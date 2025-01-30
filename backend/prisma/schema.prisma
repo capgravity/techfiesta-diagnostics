@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Doctor {
+  id         Int      @id @default(autoincrement())    // Auto-incrementing primary key
+  name       String   @db.VarChar(255)                // Doctor's name
+  email      String   @unique                         // Unique email for the doctor
+  password   String   @db.VarChar(255)                // Password
+  specialty  String   @db.VarChar(255)                // Doctor's specialty
+  patients   Patient[]                                // One-to-many relationship with patients
+  createdAt  DateTime @default(now())                 // Auto-generated timestamp for creation
+  updatedAt  DateTime @updatedAt                      // Auto-updated timestamp for modifications
+}
+
+model Patient {
+  id                 Int       @id @default(autoincrement()) // Auto-incrementing primary key
+  name               String    @db.VarChar(255)             // Patient's name
+  email              String    @unique                      // Unique email for the patient
+  age                Int                                     // Patient's age
+  gender             String    @db.VarChar(50)              // Gender
+  brainScan          BrainScan?                             // Optional brain scan data
+  alzheimerBiomarkers String[]                             // List of biomarkers for Alzheimer's
+  cognitiveTests     CognitiveTest[]                        // Array of cognitive test data
+  doctorId           Int                                    // Foreign key for doctor
+  doctor             Doctor    @relation(fields: [doctorId], references: [id]) // Relation to Doctor
+  createdAt          DateTime  @default(now())              // Auto-generated timestamp for creation
+  updatedAt          DateTime  @updatedAt                   // Auto-updated timestamp for modifications
+}
+
+// Embedded type for Brain Scan
+model BrainScan {
+  id           Int      @id @default(autoincrement())  // Auto-incrementing primary key
+  scanType     String?  @db.VarChar(100)              // Scan type (e.g., MRI, CT)
+  scanDate     DateTime?                              // Date of the scan
+  scanImage    String?  @db.Text                      // URL or path to the scan image
+  tumorDetected Boolean?                              // Whether a tumor was detected
+  tumorType    String?  @db.VarChar(100)              // Tumor type (e.g., malignant, benign)
+  patientId    Int      @unique                              // Foreign key for patient
+  patient      Patient  @relation(fields: [patientId], references: [id]) // Relation to Patient
+}
+
+// Embedded type for Cognitive Tests
+model CognitiveTest {
+  id             Int      @id @default(autoincrement())  // Auto-incrementing primary key
+  testName       String?  @db.VarChar(100)              // Name of the cognitive test
+  testDate       DateTime?                              // Date of the test
+  score          Int?                                   // Score of the cognitive test
+  interpretation String?  @db.VarChar(255)              // Interpretation of the test result
+  patientId      Int                                    // Foreign key for patient
+  patient        Patient  @relation(fields: [patientId], references: [id]) // Relation to Patient
+}
