@@ -43,7 +43,7 @@ const signup = async (req, res) => {
 const profile = async (req, res) => {
   try {
     // The authenticated doctor is set in req.user by the protectRoute middleware
-    const doctorId = req.user.id;
+    const doctorId = req.doctor.id;
 
     // Fetch the doctor profile with associated patients and their details
     const doctor = await prisma.Doctor.findUnique({

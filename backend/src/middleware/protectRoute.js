@@ -12,7 +12,6 @@ const protectRoute= async (req,res,next) =>{
         if(!decoded){
             return res.status(401).json({error: "Unauthorised: Invalid Token"})
         }
-
         
         // Fetch the doctor from the database using the decoded ID
         const doctor = await prisma.Doctor.findUnique({
