@@ -1,279 +1,190 @@
 const prisma = require('../utils/prisma');
 
-// Add a new patient
 const addPatient = async (req, res) => {
-  const { name, email, age, gender, brainScan, alzheimerBiomarkers, cognitiveTests } = req.body;
-  //tocheck for unique email
-  const existingPatient = await prisma.Patient.findUnique({
-    where: { email: email },
-  });
+  // Getting the logged-in doctor id from the request (e.g., from the authentication token or session)
+  const doctorId = req.doctor.id;  // Using req.doctor.id instead of req.user.id
 
-  if (existingPatient) {
-    return res.status(400).json({ message: 'Patient with this email already exists.' });
-  }
+  // Extracting patient data from the request body
+  const { name, gender, age, smoker, alcoholConsumption, neurologicalCondition } = req.body;
+
   try {
-    const patient = await prisma.Patient.create({
-      data: {
-        name,
-        email,
-        age,
-        gender,
-        alzheimerBiomarkers: { set: alzheimerBiomarkers }, // Set the Alzheimer's biomarkers
-        cognitiveTests: {
-          create: cognitiveTests, // Nested create for cognitive tests
-        },
-        doctor: { connect: { id: req.doctor.id } }, // Connect to doctor
-      },
-    });
-
-    // Handle brain scan if provided
-    if (brainScan) {
-      await prisma.BrainScan.create({
-        data: {
-          scanType: brainScan.scanType,
-          scanDate: brainScan.scanDate,
-          scanImage: brainScan.scanImage,
-          tumorDetected: brainScan.tumorDetected,
-          tumorType: brainScan.tumorType,
-          patient: { connect: { id: patient.id } },
-        },
-      });
+    // Validate input
+    if (!name || !gender || !age || !smoker || !alcoholConsumption || !neurologicalCondition) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Update doctor’s patient list
-    await prisma.Doctor.update({
-      where: { id: req.doctor.id },
+    // Create the patient record in the database
+    const patient = await prisma.patient.create({
       data: {
-        patients: {
-          connect: { id: patient.id },
-        },
+        name,
+        gender,
+        age,
+        smoker,
+        alcoholConsumption,
+        neurologicalCondition,
+        doctorId,  // Associate with the logged-in doctor
       },
     });
 
-    res.status(201).json({ message: 'Patient added successfully', patient });
+    // Respond with the newly created patient
+    return res.status(201).json(patient);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error while adding patient' });
+    return res.status(500).json({ message: 'Error creating patient' });
   }
 };
 
-// Update patient details
-const updatePatient = async (req, res) => {
-  const { name, email, age, gender, brainScan, alzheimerBiomarkers, cognitiveTests } = req.body;
-
+const getAllPatients = async (req, res) => {
   try {
-    const patient = await prisma.Patient.findFirst({
+    // Assuming you have the doctorId stored in the JWT token after login
+    const doctorId = req.doctor.id;  // This comes from the protect middleware (from JWT)
+
+    // Querying the patients associated with the logged-in doctor
+    const patients = await prisma.patient.findMany({
       where: {
-        id: parseInt(req.params.id),
-        doctorId: req.doctor.id,
+        doctorId: doctorId,  // Only fetch patients linked to the logged-in doctor
+      },
+      select: {
+        id: true,
+        name: true,
+        gender: true,
+        age: true,
+        smoker: true,
+        alcoholConsumption: true,
+        neurologicalCondition: true,
+        
+        doctorId: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
+    return res.status(200).json({ patients });
+  } catch (error) {
+    console.error('Error fetching patients:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const getPatientById = async (req, res) => {
+  try {
+    // Get patient ID from route params
+    const { id } = req.params;
+
+    // Assuming you have the doctorId stored in the JWT token after login
+    const doctorId = req.doctor.id;  // This comes from the protect middleware (from JWT)
+
+    // Querying the patient associated with the logged-in doctor
+    const patient = await prisma.patient.findUnique({
+      where: {
+        id: parseInt(id),  // Ensure id is a number
+        doctorId: doctorId,  // Ensure patient belongs to the logged-in doctor
+      },
+      select: {
+        id: true,
+        name: true,
+        gender: true,
+        age: true,
+        smoker: true,
+        alcoholConsumption: true,
+        neurologicalCondition: true,
+        doctorId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // If patient is not found
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
 
-    const updatedPatient = await prisma.Patient.update({
-      where: { id: patient.id },
-      data: {
-        name: name || patient.name,
-        email: email || patient.email,
-        age: age || patient.age,
-        gender: gender || patient.gender,
-        alzheimerBiomarkers: { set: alzheimerBiomarkers || patient.alzheimerBiomarkers },
-        cognitiveTests: {
-          create: cognitiveTests || patient.cognitiveTests, // Create new cognitive tests if provided
-        },
+    return res.status(200).json({ patient });
+  } catch (error) {
+    console.error('Error fetching patient by ID:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+const updatePatient = async (req, res) => {
+  try {
+    // Get the patient ID from route parameters
+    const { id } = req.params;
+
+    // Get the updated patient details from the request body
+    const { name, gender, age, smoker, alcoholConsumption, neurologicalCondition } = req.body;
+
+    // Assuming you have the doctorId stored in the JWT token after login
+    const doctorId = req.doctor.id; // This comes from the protect middleware (from JWT)
+
+    // Find the patient by ID and ensure it belongs to the logged-in doctor
+    const patient = await prisma.patient.findUnique({
+      where: {
+        id: parseInt(id),
+        doctorId: doctorId, // Only allow updates if patient belongs to the logged-in doctor
       },
     });
-        // Handle brain scan update if provided
-if (brainScan) {
-  await prisma.BrainScan.upsert({
-    where: {
-      patientId: 1 // Replace with the actual patient ID
-    },
-    update: {
-      scanType: "MRI",
-      scanDate: new Date("2025-01-01T00:00:00Z").toISOString(), // Ensure the date is in ISO-8601 format
-      scanImage: "image_url",
-      tumorDetected: false,
-      tumorType: null
-    },
-    create: {
-      scanType: "MRI",
-      scanDate: new Date("2025-01-01T00:00:00Z").toISOString(), // Ensure the date is in ISO-8601 format
-      scanImage: "image_url",
-      tumorDetected: false,
-      tumorType: null,
-      patient: {
-        connect: {
-          id: 1 // Replace with the actual patient ID
-        }
-      }
+
+    // If patient is not found, return 404
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' });
     }
-  });
-}
-    res.json({ message: 'Patient details updated successfully', updatedPatient });
+
+    // Update patient details
+    const updatedPatient = await prisma.patient.update({
+      where: {
+        id: parseInt(id),
+      },
+      data: {
+        name: name || patient.name,
+        gender: gender || patient.gender,
+        age: age || patient.age,
+        smoker: smoker || patient.smoker,
+        alcoholConsumption: alcoholConsumption || patient.alcoholConsumption,
+        neurologicalCondition: neurologicalCondition || patient.neurologicalCondition,
+      },
+    });
+
+    // Return the updated patient details
+    return res.status(200).json({ patient: updatedPatient });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error while updating patient' });
+    console.error('Error updating patient:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 
 const deletePatient = async (req, res) => {
   try {
-    const patientId = parseInt(req.params.id, 10);
+    const { id } = req.params;  // Get patient ID from URL parameters
 
-    // Step 1: Validate patient ID
-    if (isNaN(patientId)) {
-      return res.status(400).json({ message: 'Invalid patient ID' });
-    }
-
-    // Step 2: Find the patient along with related data
-    const patient = await prisma.Patient.findUnique({
-      where: { id: patientId },
-      include: { brainScan: true, cognitiveTests: true, doctor: true },
-    });
-
-    // Step 3: Check if the patient exists
-    if (!patient) {
-      return res.status(404).json({ message: 'Patient not found' });
-    }
-    
-
-    // Step 4: Delete related brain scan if it exists
-    if (patient.brainScan) {
-      await prisma.BrainScan.delete({
-        where: { id: patient.brainScan.id },
-      });
-    }
-
-    // Step 5: Delete related cognitive tests if they exist
-    if (patient.cognitiveTests.length > 0) {
-      await prisma.CognitiveTest.deleteMany({
-        where: { patientId: patientId },
-      });
-    }
-
-    // Step 6: Remove the patient from the doctor's list of patients (disconnect the relationship)
-    if (patient.doctor) {
-      await prisma.Doctor.update({
-        where: { id: patient.doctorId },
-        data: {
-          patients: {
-            disconnect: { id: patientId },
-          },
-        },
-      });
-    }
-
-    // Step 7: Delete the patient record
-    await prisma.Patient.delete({
-      where: { id: patientId },
-    });
-
-    // Step 8: Respond with success message
-    res.json({ message: 'Patient deleted successfully' });
-  } catch (error) {
-    console.error(error);
-
-    // Step 9: Handle Prisma errors specifically
-    if (error.code === 'P2025') {
-      return res.status(404).json({ message: 'Patient not found' });
-    }
-
-    // Step 10: General error handling
-    res.status(500).json({ message: 'Server error while deleting patient' });
-  }
-};
-
-
-// Brain tumor and Alzheimer’s detection
-const detection = async (req, res) => {
-  const { brainTumorModelData, alzheimerModelData } = req.body;
-
-  try {
-    const patient = await prisma.Patient.findFirst({
-      where: {
-        id: parseInt(req.params.id),
-        doctorId: req.doctor.id,
-      },
+    // Check if the patient exists
+    const patient = await prisma.patient.findUnique({
+      where: { id: parseInt(id) },  // Find patient by ID
     });
 
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
 
-    const brainTumorResult = brainTumorModelData ? 'Tumor Detected' : 'No Tumor Detected';
-    const alzheimerResult = alzheimerModelData ? 'Alzheimer’s Risk Detected' : 'No Alzheimer’s Risk';
-
-    res.json({
-      message: 'Detection complete',
-      brainTumorResult,
-      alzheimerResult,
+    // Delete the patient
+    await prisma.patient.delete({
+      where: { id: parseInt(id) },  // Delete patient by ID
     });
+
+    return res.status(200).json({ message: 'Patient deleted successfully' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error during detection' });
+    console.error('Error deleting patient:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-// Get all patients for the logged-in doctor
-const getAllPatients = async (req, res) => {
-    try {
-      const patients = await prisma.Patient.findMany({
-        where: {
-          doctorId: req.doctor.id, // Assuming doctor information is in req.doctor
-        },
-      });
-  
-      if (!patients.length) {
-        return res.status(404).json({ message: 'No patients found' });
-      }
-  
-      res.json({ message: 'Patients retrieved successfully', patients });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error while fetching patients' });
-    }
-  };
-
-// Get a single patient by ID
-const getPatientById = async (req, res) => {
-  try {
-    const patientId = parseInt(req.params.id, 10); // Ensure the ID is parsed as an integer
-
-    if (isNaN(patientId)) {
-      return res.status(400).json({ message: 'Invalid patient ID' });
-    }
-
-    const patient = await prisma.Patient.findUnique({
-      where: {
-        id: patientId, // Fetch patient by ID
-      },
-    });
-
-    if (!patient) {
-      return res.status(404).json({ message: 'Patient not found' });
-    }
-
-    // Optional: Check if the logged-in doctor is the owner of the patient record
-    if (patient.doctorId !== req.doctor.id) {
-      return res.status(403).json({ message: 'You are not authorized to access this patient' });
-    }
-
-    res.json(patient);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error while fetching patient' });
-  }
-};
 
 module.exports = {
   addPatient,
   updatePatient,
   deletePatient,
-  detection,
+  // detection,
   getAllPatients,
   getPatientById,
 };

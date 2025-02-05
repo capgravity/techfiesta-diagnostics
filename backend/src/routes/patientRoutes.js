@@ -18,7 +18,7 @@ router.put('/:id', protect, patientController.updatePatient);
 // Delete a patient
 router.delete('/:id', protect, patientController.deletePatient);
 
-// Brain tumor and Alzheimer’s detection
-router.post('/:id/detection', protect, patientController.detection);
+// // Brain tumor and Alzheimer’s detection
+// router.post('/:id/detection', protect, patientController.detection);
 
 module.exports = router;

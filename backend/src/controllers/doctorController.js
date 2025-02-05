@@ -34,24 +34,23 @@ const signup = async (req, res) => {
   }
 };
 
-// Fetch the profile of the currently logged-in doctor
+
 const profile = async (req, res) => {
   try {
-    // The authenticated doctor is set in req.user by the protectRoute middleware
-
     const doctorId = req.doctor.id;
-    // Fetch the doctor profile with associated patients and their details
-    const doctor = await prisma.Doctor.findUnique({
+
+    const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
       include: {
         patients: {
           include: {
-            brainScan: true, // Include brain scan details
-            cognitiveTests: true, // Include cognitive tests
+            mriScans: true, // Fetch related MRI scans
+            gradCamScans: true, // Fetch related GradCam scans
           },
         },
       },
     });
+
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
     }
