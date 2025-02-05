@@ -3,6 +3,16 @@ require("dotenv").config(); // Load environment variables from .env file
 const app = require("./app"); // Import the Express app from app.js
 const prisma = require("./utils/prisma"); // Import Prisma Client (optional, for graceful shutdown)
 const PORT = process.env.PORT || 5000; // Set the port for the server
+const cors= require('cors');
+
+
+// Configure CORS to allow requests from any origin
+app.use(cors({
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allow specific methods
+  allowedHeaders: ['Content-Type', 'Authorization'] // Allow specific headers
+}));
+
 
 // Start the server
 const server = app.listen(PORT, () => {

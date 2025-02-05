@@ -19,7 +19,7 @@ model Doctor {
   email      String   @unique                         // Unique email for the doctor
   password   String   @db.VarChar(255)                // Password
   specialty  String   @db.VarChar(255)                // Doctor's specialty
-  patients   Patient[]                                // One-to-many relationship with patients
+  patients   Patient[]  @relation("DoctorToPatient")                             // One-to-many relationship with patients
   createdAt  DateTime @default(now())                 // Auto-generated timestamp for creation
   updatedAt  DateTime @updatedAt                      // Auto-updated timestamp for modifications
 }
@@ -33,8 +33,8 @@ model Patient {
   brainScan          BrainScan?                             // Optional brain scan data
   alzheimerBiomarkers String[]                             // List of biomarkers for Alzheimer's
   cognitiveTests     CognitiveTest[]                        // Array of cognitive test data
-  doctorId           Int                                    // Foreign key for doctor
-  doctor             Doctor    @relation(fields: [doctorId], references: [id]) // Relation to Doctor
+  doctorId           Int?                                    // Foreign key for doctor
+  doctor             Doctor?    @relation("DoctorToPatient",fields: [doctorId], references: [id]) // Relation to Doctor
   createdAt          DateTime  @default(now())              // Auto-generated timestamp for creation
   updatedAt          DateTime  @updatedAt                   // Auto-updated timestamp for modifications
 }
