@@ -16,10 +16,10 @@ const FileUpload = () => {
         }
 
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("mri", file);
 
         try {
-            const response = await axios.post("http://localhost:5000/upload", formData, {
+            const response = await axios.post("http://localhost:5000/upload/gradcam", formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                 },

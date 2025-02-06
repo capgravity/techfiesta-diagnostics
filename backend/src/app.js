@@ -22,7 +22,7 @@ app.use(cors({
 // Routes
 app.use('/', indexRoute); // Root route for landing page
 app.use('/upload', testUpload);
-// app.use('/upload/gradcam', gradcamUpload);
+app.use('/upload/gradcam', gradcamUpload);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/patients', patientRoutes);
 

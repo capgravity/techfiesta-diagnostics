@@ -19,14 +19,7 @@ router.put('/:id', protect, patientController.updatePatient);
 // Delete a patient
 router.delete('/:id', protect, patientController.deletePatient);
 
-// //Gradcam detection 
-// router.post('/:id/gradcam/detect', protect, patientController.gradcam);
 
-// //Alzheimer prediction 
-// router.post('/:id/alzheimer/predict', protect, patientController.prediction);
-
-// //common chatbot interaction
-// router.post('/chatbot/interact', protect, patientController.chatbot);
 
 
 
