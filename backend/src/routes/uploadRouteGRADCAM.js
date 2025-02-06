@@ -1,19 +1,28 @@
 // const express = require("express");
-// const multerHandling = require("../middlewares/multerHandling");
+// const upload= require("../middleware/multerHanding");
 // const { uploadOnCloudinary } = require("../utils/cloudinary");
 // const axios = require("axios");
 // const fs = require("fs");
 
 // const router = express.Router();
 
-// router.post("/", multerHandling.single("mri"), async (req, res) => {
+// router.post("/", upload.single("mri"), async (req, res) => {
 //   try {
+//     // Check if the file exists in the request
+//     if (!req.file) {
+//         return res.status(400).json({ error: "No file provided" });
+//     }
 //     const localFilePath = req.file.path;
+//     console.log("Temporary file path:", localFilePath);
 
 //     // Step 1: Upload MRI to Cloudinary
 //     const cloudinaryResponse = await uploadOnCloudinary(localFilePath);
-//     fs.unlinkSync(localFilePath); // Remove local file after uploading to Cloudinary
-
+//     // If the upload is successful, delete the local file
+//     try {
+//         fs.unlinkSync(localFilePath);
+//     } catch (err) {
+//         console.error("Error deleting temp file:", err);
+//     }
 //     if (!cloudinaryResponse) {
 //       return res.status(500).json({ error: "Failed to upload image to Cloudinary" });
 //     }

@@ -61,7 +61,7 @@ def show_grad_cam_plus_plus(img_path, alpha=0.5):
     plt.axis("off")
     plt.savefig(output_path, bbox_inches="tight", pad_inches=0, dpi=300)
 
-output_path = "output_HEATMAP_pictures/gradcam_output.png"  # Path where the Grad-CAM output image will be saved
+output_path = "output_HEATMAP_pictures/gradcam_output2.png"  # Path where the Grad-CAM output image will be saved
 img_path = "input_MRI_pictures/images.jpg"  # Path to your input MRI image
 
 # output_path = "Replace with mri scan path e.g C:/Users/vedan/OneDrive/Documents/beginners/dementia/alzheimer.jpg"

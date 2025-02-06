@@ -12,13 +12,12 @@ const addPatient = async (req, res) => {
     if (!name || !gender || !age || !smoker || !alcoholConsumption || !neurologicalCondition) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-
     // Create the patient record in the database
     const patient = await prisma.patient.create({
       data: {
         name,
         gender,
-        age,
+        age: parseInt(age,10),
         smoker,
         alcoholConsumption,
         neurologicalCondition,
@@ -180,11 +179,13 @@ const deletePatient = async (req, res) => {
 };
 
 
+
+
+
 module.exports = {
   addPatient,
   updatePatient,
   deletePatient,
-  // detection,
   getAllPatients,
   getPatientById,
 };
