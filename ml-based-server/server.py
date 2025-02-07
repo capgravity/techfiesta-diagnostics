@@ -6,9 +6,18 @@ from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.vgg19 import VGG19, preprocess_input
 import os
 import uuid
+import base64
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
+# Initialize the OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Grad-CAM++ Functions
 def grad_cam_plus_plus(model, img_array, layer_name="block5_conv3"):
     """
     Generate Grad-CAM++ heatmap for a given image and model.
@@ -64,6 +73,7 @@ def show_grad_cam_plus_plus(img_path, output_path, alpha=0.5):
     plt.axis("off")
     plt.savefig(output_path, bbox_inches="tight", pad_inches=0, dpi=300)
 
+# Endpoint for Grad-CAM++
 @app.route('/process', methods=['POST'])
 def process_image():
     data = request.json
@@ -88,5 +98,42 @@ def process_image():
 
     return jsonify({"heatmapPath": output_path})
 
+# Endpoint for OpenAI GPT-4 Turbo with Vision
+@app.route('/analyze', methods=['POST'])
+def analyze_image():
+    # Get the text prompt and image URL from the request
+    data = request.json
+    if not data or 'prompt' not in data or 'image_url' not in data:
+        return jsonify({"error": "Please provide both 'prompt' and 'image_url' in the JSON payload"}), 400
+
+    user_prompt = data['prompt']
+    image_url = data['image_url']
+
+    # Define the text prompt and include the image URL
+    prompt = [
+        {
+            "type": "text",
+            "text": user_prompt
+        },
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": image_url
+            }
+        }
+    ]
+
+    # Call OpenAI's GPT-4 Turbo with Vision model
+    response = client.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful medical assistant."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    # Return the response
+    return jsonify({"response": response.choices[0].message.content})
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=8080, debug=True)

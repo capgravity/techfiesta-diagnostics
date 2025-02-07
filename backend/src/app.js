@@ -6,6 +6,7 @@ const indexRoute = require('./routes/index');
 const patientRoutes= require('./routes/patientRoutes');
 const testUpload= require('./routes/testUpload');
 const gradcamUpload= require('./routes/uploadRouteGRADCAM');
+const chatbot= require('./routes/chatbot');
 const app = express();
 
 // Middleware
@@ -25,6 +26,7 @@ app.use('/upload', testUpload);
 app.use('/upload/gradcam', gradcamUpload);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/patients', patientRoutes);
+app.use('/chatbot', chatbot);
 
 
 

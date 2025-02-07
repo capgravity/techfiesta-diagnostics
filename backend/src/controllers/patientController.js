@@ -138,7 +138,7 @@ const updatePatient = async (req, res) => {
       data: {
         name: name || patient.name,
         gender: gender || patient.gender,
-        age: age || patient.age,
+        age: parseInt(age,10) || patient.age,
         smoker: smoker || patient.smoker,
         alcoholConsumption: alcoholConsumption || patient.alcoholConsumption,
         neurologicalCondition: neurologicalCondition || patient.neurologicalCondition,

@@ -32,7 +32,7 @@ router.post("/", upload.single("mri"), async (req, res) => {
     const mriImageUrl = cloudinaryResponse.url;
 
     // Step 2: Send MRI URL to Grad-CAM model
-    const gradcamResponse = await axios.post("http://localhost:8000/process", {
+    const gradcamResponse = await axios.post("http://localhost:8080/process", {
       imageUrl: mriImageUrl,
     });
 
