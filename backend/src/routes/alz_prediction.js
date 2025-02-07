@@ -30,7 +30,10 @@ router.post("/", upload.single("file"), async (req, res) => {
         const mlServerResponse = await axios.post('http://localhost:8080/predict', {
             imageUrl: uploadResponse.url,
         });
-
+        console.log("data is");
+        console.log(mlServerResponse.data);
+        console.log("cloudinary url is :");
+        console.log(uploadResponse.url);
         // Send the ML server's response back to the frontend
         return res.status(200).json({
             message: "File uploaded and processed successfully",

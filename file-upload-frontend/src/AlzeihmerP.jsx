@@ -8,6 +8,20 @@ const AlzheimerP = () => {
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      const fileType = selectedFile.type;
+      const validImageTypes = ['image/jpeg', 'image/png'];
+
+      if (!validImageTypes.includes(fileType)) {
+        setError('Invalid file type. Please upload a JPEG or PNG image.');
+        setFile(null);
+        return;
+      }
+
+      setFile(selectedFile);
+      setError(null);
+    }
   };
 
   const handleSubmit = async () => {

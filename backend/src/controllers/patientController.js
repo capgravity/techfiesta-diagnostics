@@ -1,4 +1,8 @@
 const prisma = require('../utils/prisma');
+const { uploadOnCloudinary } = require("../utils/cloudinary");
+const axios = require('axios');
+const fs = require("fs");
+
 
 const addPatient = async (req, res) => {
   // Getting the logged-in doctor id from the request (e.g., from the authentication token or session)
@@ -178,6 +182,63 @@ const deletePatient = async (req, res) => {
   }
 };
 
+const predictionPatient= async (req,res) => {
+  try {
+    const patientId = parseInt(req.params.id, 10);
+
+    // Check if the file exists in the request
+    if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+    }
+
+    const localFilePath = req.file.path; // Temporary file path
+    console.log("Temporary file path:", localFilePath);
+
+    // Upload to Cloudinary
+    const uploadResponse = await uploadOnCloudinary(localFilePath);
+
+    // If the upload is successful, delete the local file
+    try {
+        fs.unlinkSync(localFilePath);
+    } catch (err) {
+        console.error("Error deleting temp file:", err);
+    }
+
+    // Store the MRI scan URL in the MriScan model
+    await prisma.mriScan.create({
+        data: {
+            publicImageUrl: uploadResponse.url,
+            patientId: patientId,
+        },
+    });
+
+    // Send the Cloudinary URL to the ML server for prediction
+    const mlServerResponse = await axios.post('http://localhost:8080/predict', {
+        imageUrl: uploadResponse.url,
+    });
+
+    // Store the Alzheimer's prediction score in the alzheimerPredictionScores array
+    const alzheimerProbability = mlServerResponse.data.alzheimer_probability;
+    await prisma.patient.update({
+        where: { id: patientId },
+        data: {
+            alzheimerPredictionScores: {
+                push: alzheimerProbability,
+            },
+        },
+    });
+
+    // Send the response back to the frontend
+    return res.status(200).json({
+        message: "File uploaded and processed successfully",
+        cloudinaryUrl: uploadResponse.url,
+        prediction: mlServerResponse.data,
+    });
+} catch (error) {
+    console.error("Error handling file upload:", error);
+    return res.status(500).json({ error: "Failed to upload and process file" });
+}
+}
 
 
 
@@ -188,4 +249,5 @@ module.exports = {
   deletePatient,
   getAllPatients,
   getPatientById,
+  predictionPatient,
 };

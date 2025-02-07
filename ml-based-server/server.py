@@ -185,6 +185,10 @@ def predict():
         # Load the image from the response content
         img = Image.open(BytesIO(response.content))
 
+        # Convert the image to RGB if it is in RGBA mode
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+
         # Save the image temporarily (optional, for debugging)
         temp_path = "temp_image.jpg"
         img.save(temp_path)

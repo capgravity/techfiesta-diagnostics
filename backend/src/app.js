@@ -10,6 +10,7 @@ const chatbot= require('./routes/chatbot');
 const prediction= require('./routes/alz_prediction');
 const app = express();
 
+
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -29,6 +30,7 @@ app.use('/api/doctors', doctorRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/chatbot', chatbot);
 app.use('/prediction', prediction);
+
 
 
 
