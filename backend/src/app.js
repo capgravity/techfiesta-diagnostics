@@ -7,6 +7,7 @@ const patientRoutes= require('./routes/patientRoutes');
 const testUpload= require('./routes/testUpload');
 const gradcamUpload= require('./routes/uploadRouteGRADCAM');
 const chatbot= require('./routes/chatbot');
+const prediction= require('./routes/alz_prediction');
 const app = express();
 
 // Middleware
@@ -22,11 +23,12 @@ app.use(cors({
 
 // Routes
 app.use('/', indexRoute); // Root route for landing page
-app.use('/upload', testUpload);
+app.use('/upload', testUpload);// FOR DEV ONLY, DONT USE
 app.use('/upload/gradcam', gradcamUpload);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/chatbot', chatbot);
+app.use('/prediction', prediction);
 
 
 
