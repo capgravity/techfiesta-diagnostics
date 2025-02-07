@@ -71,43 +71,59 @@ const getAllPatients = async (req, res) => {
 
 const getPatientById = async (req, res) => {
   try {
-    // Get patient ID from route params
-    const { id } = req.params;
+    const { id } = req.params; // Get patient ID from route params
+    const doctorId = req.doctor.id; // Ensure the patient belongs to the logged-in doctor
 
-    // Assuming you have the doctorId stored in the JWT token after login
-    const doctorId = req.doctor.id;  // This comes from the protect middleware (from JWT)
-
-    // Querying the patient associated with the logged-in doctor
     const patient = await prisma.patient.findUnique({
       where: {
-        id: parseInt(id),  // Ensure id is a number
-        doctorId: doctorId,  // Ensure patient belongs to the logged-in doctor
+        id: parseInt(id),
+        doctorId: doctorId, // Ensure the patient belongs to the logged-in doctor
       },
-      select: {
-        id: true,
-        name: true,
-        gender: true,
-        age: true,
-        smoker: true,
-        alcoholConsumption: true,
-        neurologicalCondition: true,
-        doctorId: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        mriScans: {
+          orderBy: {
+            createdAt: 'desc', // Sort MRI scans by creation date (newest first)
+          },
+        },
+        gradCamScans: {
+          orderBy: {
+            createdAt: 'desc', // Sort Grad-CAM scans by creation date (newest first)
+          },
+        },
       },
     });
+
+
 
     // If patient is not found
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
 
-    return res.status(200).json({ patient });
+    // Return the patient data with MRI and Grad-CAM scans
+    return res.status(200).json({
+      patient: {
+        id: patient.id,
+        name: patient.name,
+        gender: patient.gender,
+        age: patient.age,
+        smoker: patient.smoker,
+        alcoholConsumption: patient.alcoholConsumption,
+        neurologicalCondition: patient.neurologicalCondition,
+        alzheimerPredictionScores: patient.alzheimerPredictionScores,
+        mriScans: patient.mriScans, // Array of MRI scans
+        gradCamScans: patient.gradCamScans, // Array of Grad-CAM scans
+        createdAt: patient.createdAt,
+        updatedAt: patient.updatedAt,
+      },
+    });
   } catch (error) {
-    console.error('Error fetching patient by ID:', error);
+    console.error('Error fetching patient details:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
 
 
 const updatePatient = async (req, res) => {
