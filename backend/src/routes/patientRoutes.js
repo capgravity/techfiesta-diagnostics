@@ -23,6 +23,9 @@ router.delete('/:id', protect, patientController.deletePatient);
 //alz prediction for a patient
 router.post('/:id/prediction', protect, upload.single("file"), patientController.predictionPatient);
 
+//gradcam for a patient
+router.post('/:id/gradcam', protect,upload.single("file"), patientController.gradcamPatient);
+
 
 
 

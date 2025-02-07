@@ -43,17 +43,21 @@ model Patient {
 
 model MriScan {
   id             Int          @id @default(autoincrement())
-  publicImageUrl String       @db.VarChar(255)
+  publicImageUrl String       @db.Text
   patientId      Int
   patient        Patient      @relation("PatientToMriScan", fields: [patientId], references: [id])
   gradCamScan    GradCamScan?
+  createdAt      DateTime     @default(now()) // Auto-generated timestamp for creation
+  updatedAt      DateTime?     @updatedAt // Auto-updated timestamp for modifications
 }
 
 model GradCamScan {
   id             Int     @id @default(autoincrement())
-  publicImageUrl String  @db.VarChar(255)
+  publicImageUrl String  @db.Text
   mriScan        MriScan @relation(fields: [mriScanId], references: [id])
   mriScanId      Int     @unique
   patientId      Int
   patient        Patient @relation("PatientToGradCamScan", fields: [patientId], references: [id])
+  createdAt      DateTime @default(now()) // Auto-generated timestamp for creation
+  updatedAt      DateTime? @updatedAt // Auto-updated timestamp for modifications
 }

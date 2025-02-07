@@ -216,16 +216,38 @@ const predictionPatient= async (req,res) => {
     const mlServerResponse = await axios.post('http://localhost:8080/predict', {
         imageUrl: uploadResponse.url,
     });
-
-    // Store the Alzheimer's prediction score in the alzheimerPredictionScores array
     const alzheimerProbability = mlServerResponse.data.alzheimer_probability;
-    await prisma.patient.update({
+    // modified 2.0
+
+    // // Get the current patient to retrieve existing scores
+    // const currentPatient = await prisma.patient.findUnique({
+    //   where: { id: patientId },
+    // });
+
+    // // Append the new score
+    // const updatedScores = [...currentPatient.alzheimerPredictionScores, alzheimerProbability];
+
+    // // Update the patient with the new scores array
+    // await prisma.patient.update({
+    //   where: { id: patientId },
+    //   data: {
+    //     alzheimerPredictionScores: updatedScores,
+    //   },
+    // });
+
+    await prisma.$transaction(async (prisma) => {
+      const currentPatient = await prisma.patient.findUnique({
+        where: { id: patientId },
+      });
+    
+      const updatedScores = [...currentPatient.alzheimerPredictionScores, alzheimerProbability];
+    
+      await prisma.patient.update({
         where: { id: patientId },
         data: {
-            alzheimerPredictionScores: {
-                push: alzheimerProbability,
-            },
+          alzheimerPredictionScores: updatedScores,
         },
+      });
     });
 
     // Send the response back to the frontend
@@ -237,10 +259,114 @@ const predictionPatient= async (req,res) => {
 } catch (error) {
     console.error("Error handling file upload:", error);
     return res.status(500).json({ error: "Failed to upload and process file" });
-}
+} finally {
+  await prisma.$disconnect();
 }
 
+};
 
+const gradcamPatient= async(req, res) =>{
+  try {
+    const patientId = parseInt(req.params.id,10);
+    
+    // Verify patient exists
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+    });
+
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No MRI file provided" });
+    }
+
+    const localFilePath = req.file.path;
+
+    // Upload MRI to Cloudinary
+    const mriCloudinaryResponse = await uploadOnCloudinary(localFilePath);
+    
+    // Cleanup temp file
+    try {
+      fs.unlinkSync(localFilePath);
+    } catch (err) {
+      console.error("Error deleting MRI temp file:", err);
+    }
+
+    if (!mriCloudinaryResponse?.url) {
+      return res.status(500).json({ error: "Failed to upload MRI to Cloudinary" });
+    }
+
+    // Create MRI Scan record
+    const mriScan = await prisma.mriScan.create({
+      data: {
+        publicImageUrl: mriCloudinaryResponse.url,
+        patientId: patientId,
+      },
+    });
+
+    // Process with Grad-CAM model
+    const gradcamResponse = await axios.post('http://localhost:8080/process', {
+      imageUrl: mriCloudinaryResponse.url,
+    });
+
+    if (!gradcamResponse.data?.heatmapPath) {
+      return res.status(500).json({ error: "Grad-CAM processing failed" });
+    }
+
+    const heatmapLocalPath = gradcamResponse.data.heatmapPath;
+
+    // Upload Heatmap to Cloudinary
+    const heatmapCloudinaryResponse = await uploadOnCloudinary(heatmapLocalPath);
+    
+    // Cleanup heatmap temp file
+    try {
+      fs.unlinkSync(heatmapLocalPath);
+    } catch (err) {
+      console.error("Error deleting heatmap temp file:", err);
+    }
+
+    if (!heatmapCloudinaryResponse?.url) {
+      return res.status(500).json({ error: "Failed to upload heatmap to Cloudinary" });
+    }
+
+    // Create Grad-CAM Scan record
+    await prisma.gradCamScan.create({
+      data: {
+        publicImageUrl: heatmapCloudinaryResponse.url,
+        mriScanId: mriScan.id,
+        patientId: mriScan.patientId,
+      },
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "MRI and Grad-CAM scans processed successfully",
+      heatmapUrl: heatmapCloudinaryResponse.url,
+      mriUrl: mriCloudinaryResponse.url,
+    });
+
+  } catch (error) {
+    console.error("Error in gradcamPatient:", error);
+    
+    // Cleanup any remaining temporary files
+    if (req.file?.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error("Error cleaning up temp file:", err);
+      }
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Internal server error",
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+};
 
 
 module.exports = {
@@ -250,4 +376,5 @@ module.exports = {
   getAllPatients,
   getPatientById,
   predictionPatient,
+  gradcamPatient,
 };
